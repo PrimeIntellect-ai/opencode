@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+### Example:
+### `bash script/release-fork.sh --version 1.1.63-swe2 --repo rasdani/opencode`
+
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
