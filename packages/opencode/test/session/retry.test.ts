@@ -121,6 +121,19 @@ describe("session.retry.retryable", () => {
 
     expect(SessionRetry.retryable(error)).toBeUndefined()
   })
+
+  test("does not retry rollout lifecycle conflict responses", () => {
+    const error = new MessageV2.APIError({
+      message: "Conflict: Rollout reached max turns",
+      statusCode: 409,
+      isRetryable: true,
+      metadata: {
+        url: "https://gateway.example/v1/rollouts/rollout_abc/chat/completions",
+      },
+    }).toObject() as MessageV2.APIError
+
+    expect(SessionRetry.retryable(error)).toBeUndefined()
+  })
 })
 
 describe("session.message-v2.fromError", () => {
