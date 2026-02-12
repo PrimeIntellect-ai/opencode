@@ -222,7 +222,7 @@ describe("tool.bash permissions", () => {
         }
         await bash.execute(
           {
-            command: "git log --oneline -5",
+            command: "ls -la",
           },
           testCtx,
         )
@@ -297,6 +297,53 @@ describe("tool.bash permissions", () => {
         expect(bashReq).toBeDefined()
         const pattern = bashReq!.always[0]
         expect(pattern).toBe("ls *")
+      },
+    })
+  })
+})
+
+describe("tool.bash blocklist", () => {
+  test("blocks git by default", async () => {
+    await Instance.provide({
+      directory: projectRoot,
+      fn: async () => {
+        const bash = await BashTool.init()
+        await expect(bash.execute({ command: "git status" }, ctx)).rejects.toThrow(
+          "Bash command 'git' is not allowed. Please use a different command or tool.",
+        )
+      },
+    })
+  })
+
+  test("allows git when ALLOW_GIT=1", async () => {
+    const prev = process.env.ALLOW_GIT
+    process.env.ALLOW_GIT = "1"
+    try {
+      await Instance.provide({
+        directory: projectRoot,
+        fn: async () => {
+          const bash = await BashTool.init()
+          const result = await bash.execute({ command: "git --version >/dev/null 2>&1 || true" }, ctx)
+          expect(result.metadata.exit).toBe(0)
+        },
+      })
+    } finally {
+      if (prev === undefined) {
+        delete process.env.ALLOW_GIT
+      } else {
+        process.env.ALLOW_GIT = prev
+      }
+    }
+  })
+
+  test("blocks commands in chained segments", async () => {
+    await Instance.provide({
+      directory: projectRoot,
+      fn: async () => {
+        const bash = await BashTool.init()
+        await expect(bash.execute({ command: "echo ok && nohup sleep 1" }, ctx)).rejects.toThrow(
+          "Bash command 'nohup' is not allowed. Please use a different command or tool.",
+        )
       },
     })
   })

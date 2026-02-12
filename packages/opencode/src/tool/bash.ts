@@ -20,8 +20,25 @@ import { Plugin } from "@/plugin"
 
 const MAX_METADATA_LENGTH = 30_000
 const DEFAULT_TIMEOUT = Flag.OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
+const BASE_BLOCKED_BASH_COMMANDS = ["ipython", "jupyter", "nohup"] as const
+const COMMAND_SEPARATORS = /&&|\|\||;|\|/
 
 export const log = Log.create({ service: "bash-tool" })
+
+function blockedBashCommands() {
+  return process.env.ALLOW_GIT === "1" ? [...BASE_BLOCKED_BASH_COMMANDS] : ["git", ...BASE_BLOCKED_BASH_COMMANDS]
+}
+
+function findBlockedCommandInChain(command: string, blocked: Set<string>) {
+  const segments = command.split(COMMAND_SEPARATORS)
+  for (const segment of segments) {
+    const trimmed = segment.trim()
+    if (!trimmed) continue
+    const firstToken = trimmed.split(/\s+/)[0]
+    if (blocked.has(firstToken)) return firstToken
+  }
+  return undefined
+}
 
 const resolveWasm = (asset: string) => {
   if (asset.startsWith("file://")) return fileURLToPath(asset)
@@ -76,6 +93,11 @@ export const BashTool = Tool.define("bash", async () => {
         throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
       }
       const timeout = params.timeout ?? DEFAULT_TIMEOUT
+      const blocked = new Set(blockedBashCommands())
+      const blockedCommand = findBlockedCommandInChain(params.command, blocked)
+      if (blockedCommand) {
+        throw new Error(`Bash command '${blockedCommand}' is not allowed. Please use a different command or tool.`)
+      }
       const tree = await parser().then((p) => p.parse(params.command))
       if (!tree) {
         throw new Error("Failed to parse command")
