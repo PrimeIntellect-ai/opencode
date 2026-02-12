@@ -1669,10 +1669,9 @@ function Bash(props: ToolProps<typeof BashTool>) {
   })
 
   const title = createMemo(() => {
-    const desc = props.input.description ?? "Shell"
+    const desc = "Shell"
     const wd = workdirDisplay()
     if (!wd) return `# ${desc}`
-    if (desc.includes(wd)) return `# ${desc}`
     return `# ${desc} in ${wd}`
   })
 

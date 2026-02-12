@@ -28,7 +28,6 @@ describe("tool.bash", () => {
         const result = await bash.execute(
           {
             command: "echo 'test'",
-            description: "Echo test message",
           },
           ctx,
         )
@@ -56,7 +55,6 @@ describe("tool.bash permissions", () => {
         await bash.execute(
           {
             command: "echo hello",
-            description: "Echo hello",
           },
           testCtx,
         )
@@ -83,7 +81,6 @@ describe("tool.bash permissions", () => {
         await bash.execute(
           {
             command: "echo foo && echo bar",
-            description: "Echo twice",
           },
           testCtx,
         )
@@ -111,7 +108,6 @@ describe("tool.bash permissions", () => {
         await bash.execute(
           {
             command: "cd ../",
-            description: "Change to parent directory",
           },
           testCtx,
         )
@@ -138,7 +134,6 @@ describe("tool.bash permissions", () => {
           {
             command: "ls",
             workdir: "/tmp",
-            description: "List /tmp",
           },
           testCtx,
         )
@@ -171,7 +166,6 @@ describe("tool.bash permissions", () => {
         await bash.execute(
           {
             command: `cat ${filepath}`,
-            description: "Read external file",
           },
           testCtx,
         )
@@ -203,7 +197,6 @@ describe("tool.bash permissions", () => {
         await bash.execute(
           {
             command: "rm tmpfile",
-            description: "Remove tmpfile",
           },
           testCtx,
         )
@@ -230,7 +223,6 @@ describe("tool.bash permissions", () => {
         await bash.execute(
           {
             command: "git log --oneline -5",
-            description: "Git log",
           },
           testCtx,
         )
@@ -257,7 +249,6 @@ describe("tool.bash permissions", () => {
         await bash.execute(
           {
             command: "cd .",
-            description: "Stay in current directory",
           },
           testCtx,
         )
@@ -280,7 +271,7 @@ describe("tool.bash permissions", () => {
             requests.push(req)
           },
         }
-        await bash.execute({ command: "cat > /tmp/output.txt", description: "Redirect ls output" }, testCtx)
+        await bash.execute({ command: "cat > /tmp/output.txt" }, testCtx)
         const bashReq = requests.find((r) => r.permission === "bash")
         expect(bashReq).toBeDefined()
         expect(bashReq!.patterns).toContain("cat > /tmp/output.txt")
@@ -301,7 +292,7 @@ describe("tool.bash permissions", () => {
             requests.push(req)
           },
         }
-        await bash.execute({ command: "ls -la", description: "List" }, testCtx)
+        await bash.execute({ command: "ls -la" }, testCtx)
         const bashReq = requests.find((r) => r.permission === "bash")
         expect(bashReq).toBeDefined()
         const pattern = bashReq!.always[0]
@@ -321,7 +312,6 @@ describe("tool.bash truncation", () => {
         const result = await bash.execute(
           {
             command: `seq 1 ${lineCount}`,
-            description: "Generate lines exceeding limit",
           },
           ctx,
         )
@@ -341,7 +331,6 @@ describe("tool.bash truncation", () => {
         const result = await bash.execute(
           {
             command: `head -c ${byteCount} /dev/zero | tr '\\0' 'a'`,
-            description: "Generate bytes exceeding limit",
           },
           ctx,
         )
@@ -360,7 +349,6 @@ describe("tool.bash truncation", () => {
         const result = await bash.execute(
           {
             command: "echo hello",
-            description: "Echo hello",
           },
           ctx,
         )
@@ -379,7 +367,6 @@ describe("tool.bash truncation", () => {
         const result = await bash.execute(
           {
             command: `seq 1 ${lineCount}`,
-            description: "Generate lines for file check",
           },
           ctx,
         )

@@ -94,8 +94,8 @@ export namespace Truncate {
     await Bun.write(Bun.file(filepath), text)
 
     const hint = hasTaskTool(agent)
-      ? `The tool call succeeded but the output was truncated. Full output saved to: ${filepath}\nUse the Task tool to have explore agent process this file with Grep and Read (with offset/limit). Do NOT read the full file yourself - delegate to save context.`
-      : `The tool call succeeded but the output was truncated. Full output saved to: ${filepath}\nUse Grep to search the full content or Read with offset/limit to view specific sections.`
+      ? `The tool call succeeded but the output was truncated. Full output saved to: ${filepath}\nUse a targeted inspection workflow and delegate when useful to save context. Prefer rg for search when available.`
+      : `The tool call succeeded but the output was truncated. Full output saved to: ${filepath}\nInspect only relevant sections and prefer rg for search when available.`
     const message =
       direction === "head"
         ? `${preview}\n\n...${removed} ${unit} truncated...\n\n${hint}`

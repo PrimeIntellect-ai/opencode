@@ -69,11 +69,6 @@ export const BashTool = Tool.define("bash", async () => {
           `The working directory to run the command in. Defaults to ${Instance.directory}. Use this instead of 'cd' commands.`,
         )
         .optional(),
-      description: z
-        .string()
-        .describe(
-          "Clear, concise description of what this command does in 5-10 words. Examples:\nInput: ls\nOutput: Lists files in current directory\n\nInput: git status\nOutput: Shows working tree status\n\nInput: npm install\nOutput: Installs package dependencies\n\nInput: mkdir foo\nOutput: Creates directory 'foo'",
-        ),
     }),
     async execute(params, ctx) {
       const cwd = params.workdir || Instance.directory
@@ -181,7 +176,6 @@ export const BashTool = Tool.define("bash", async () => {
       ctx.metadata({
         metadata: {
           output: "",
-          description: params.description,
         },
       })
 
@@ -191,7 +185,6 @@ export const BashTool = Tool.define("bash", async () => {
           metadata: {
             // truncate the metadata to avoid GIANT blobs of data (has nothing to do w/ what agent can access)
             output: output.length > MAX_METADATA_LENGTH ? output.slice(0, MAX_METADATA_LENGTH) + "\n\n..." : output,
-            description: params.description,
           },
         })
       }
@@ -256,11 +249,10 @@ export const BashTool = Tool.define("bash", async () => {
       }
 
       return {
-        title: params.description,
+        title: params.command,
         metadata: {
           output: output.length > MAX_METADATA_LENGTH ? output.slice(0, MAX_METADATA_LENGTH) + "\n\n..." : output,
           exit: proc.exitCode,
-          description: params.description,
         },
         output,
       }
