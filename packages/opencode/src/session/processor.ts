@@ -46,6 +46,7 @@ export namespace SessionProcessor {
         log.info("process")
         needsCompaction = false
         const shouldBreak = (await Config.get()).experimental?.continue_loop_on_deny !== true
+        const retryLimit = streamInput.user.format?.type === "json_schema" ? streamInput.user.format.retryCount : 2
         while (true) {
           try {
             let currentText: MessageV2.TextPart | undefined
@@ -346,7 +347,7 @@ export namespace SessionProcessor {
               // TODO: Handle context overflow error
             }
             const retry = SessionRetry.retryable(error)
-            if (retry !== undefined) {
+            if (retry !== undefined && attempt < retryLimit) {
               attempt++
               const delay = SessionRetry.delay(attempt, error.name === "APIError" ? error : undefined)
               SessionStatus.set(input.sessionID, {
