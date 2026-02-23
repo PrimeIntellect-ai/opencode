@@ -734,13 +734,7 @@ export namespace Config {
       // Convert legacy tools config to permissions
       const permission: Permission = {}
       for (const [tool, enabled] of Object.entries(agent.tools ?? {})) {
-        const action = enabled ? "allow" : "deny"
-        // write, edit, patch, multiedit all map to edit permission
-        if (tool === "write" || tool === "edit" || tool === "patch" || tool === "multiedit") {
-          permission.edit = action
-        } else {
-          permission[tool] = action
-        }
+        permission[tool] = enabled ? "allow" : "deny"
       }
       Object.assign(permission, agent.permission)
 
