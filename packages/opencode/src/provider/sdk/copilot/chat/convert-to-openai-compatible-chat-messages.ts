@@ -104,6 +104,12 @@ export function convertToOpenAICompatibleChatMessages(prompt: LanguageModelV2Pro
                 type: "function",
                 function: {
                   name: part.toolName,
+                  // MITO WARNING: JSON.stringify re-serializes tool call arguments to compact JSON,
+                  // losing the model's original formatting. This breaks the MITO extension property
+                  // if the model generated non-compact JSON. The same issue exists in the npm
+                  // @ai-sdk/openai-compatible package (not our code). If MITO-DEBUG logs show
+                  // extension breaks from JSON formatting, store raw arguments via ToolStatePending.raw
+                  // and use them here instead of re-serializing.
                   arguments: JSON.stringify(part.input),
                 },
                 ...partMetadata,

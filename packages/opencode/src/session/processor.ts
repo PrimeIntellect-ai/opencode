@@ -89,8 +89,6 @@ export namespace SessionProcessor {
                 case "reasoning-end":
                   if (value.id in reasoningMap) {
                     const part = reasoningMap[value.id]
-                    part.text = part.text.trimEnd()
-
                     part.time = {
                       ...part.time,
                       end: Date.now(),
@@ -305,7 +303,6 @@ export namespace SessionProcessor {
 
                 case "text-end":
                   if (currentText) {
-                    currentText.text = currentText.text.trimEnd()
                     const textOutput = await Plugin.trigger(
                       "experimental.text.complete",
                       {
