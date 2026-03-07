@@ -5,6 +5,7 @@ import { Identifier } from "../id/id"
 import { PermissionNext } from "../permission/next"
 import type { Agent } from "../agent/agent"
 import { Scheduler } from "../scheduler"
+import { Config } from "../config/config"
 
 export namespace Truncate {
   export const MAX_LINES = 2000
@@ -48,8 +49,9 @@ export namespace Truncate {
   }
 
   export async function output(text: string, options: Options = {}, agent?: Agent.Info): Promise<Result> {
+    const cfg = await Config.get()
     const maxLines = options.maxLines ?? MAX_LINES
-    const maxBytes = options.maxBytes ?? MAX_BYTES
+    const maxBytes = options.maxBytes ?? cfg.toolOutputMaxBytes ?? MAX_BYTES
     const direction = options.direction ?? "head"
     const lines = text.split("\n")
     const totalBytes = Buffer.byteLength(text, "utf-8")

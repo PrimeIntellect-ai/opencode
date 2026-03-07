@@ -1163,6 +1163,12 @@ export namespace Config {
             .describe("Token buffer for compaction. Leaves enough window to avoid overflow during compaction."),
         })
         .optional(),
+      toolOutputMaxBytes: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Maximum bytes for tool output before truncation (default: 51200)"),
       experimental: z
         .object({
           disable_paste_summary: z.boolean().optional(),
