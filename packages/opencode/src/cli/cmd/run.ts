@@ -162,7 +162,7 @@ function codesearch(info: ToolProps<typeof CodeSearchTool>) {
 function websearch(info: ToolProps<typeof WebSearchTool>) {
   inline({
     icon: "◈",
-    title: `Exa Web Search "${info.input.query}"`,
+    title: `Exa Web Search (${info.input.queries.length} ${info.input.queries.length === 1 ? "query" : "queries"})`,
   })
 }
 
