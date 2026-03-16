@@ -21,6 +21,7 @@ import { EditTool } from "../../tool/edit"
 import { WriteTool } from "../../tool/write"
 import { CodeSearchTool } from "../../tool/codesearch"
 import { WebSearchTool } from "../../tool/websearch"
+import { SerperSearchTool } from "../../tool/serpersearch"
 import { TaskTool } from "../../tool/task"
 import { SkillTool } from "../../tool/skill"
 import { BashTool } from "../../tool/bash"
@@ -163,6 +164,13 @@ function websearch(info: ToolProps<typeof WebSearchTool>) {
   inline({
     icon: "◈",
     title: `Exa Web Search (${info.input.queries.length} ${info.input.queries.length === 1 ? "query" : "queries"})`,
+  })
+}
+
+function serpersearch(info: ToolProps<typeof SerperSearchTool>) {
+  inline({
+    icon: "◈",
+    title: `Google Search (${info.input.queries.length} ${info.input.queries.length === 1 ? "query" : "queries"})`,
   })
 }
 
@@ -400,6 +408,7 @@ export const RunCommand = cmd({
         if (part.tool === "edit") return edit(props<typeof EditTool>(part))
         if (part.tool === "codesearch") return codesearch(props<typeof CodeSearchTool>(part))
         if (part.tool === "websearch") return websearch(props<typeof WebSearchTool>(part))
+        if (part.tool === "serpersearch") return serpersearch(props<typeof SerperSearchTool>(part))
         if (part.tool === "task") return task(props<typeof TaskTool>(part))
         if (part.tool === "todowrite") return todo(props<typeof TodoWriteTool>(part))
         if (part.tool === "skill") return skill(props<typeof SkillTool>(part))

@@ -1,0 +1,5 @@
+- Search Google with up to 10 queries in parallel
+- Returns titles, URLs, snippets, and knowledge graph data from Google
+- Use multiple queries to search different angles simultaneously
+
+Use the current year ({{year}}) when searching for recent information.
