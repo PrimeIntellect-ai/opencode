@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ### Example:
-### `bash script/release-fork.sh --version 1.1.63-swe2 --repo rasdani/opencode`
+### `bash script/release-fork.sh --version 1.1.63-rl1 --repo PrimeIntellect-ai/opencode`
 
 set -euo pipefail
 
@@ -16,19 +16,19 @@ Usage:
   ./script/release-fork.sh --version <version> [options]
 
 Required:
-  --version <version>       Version without or with leading v (ex: 1.1.63-swe1 or v1.1.63-swe1)
+  --version <version>       Version without or with leading v (ex: 1.1.63-rl1 or v1.1.63-rl1)
 
 Options:
-  --repo <owner/repo>       GitHub repo for release (default: rasdani/opencode)
+  --repo <owner/repo>       GitHub repo for release (default: PrimeIntellect-ai/opencode)
   --all-targets             Build all targets (default: single target for current platform)
   --draft-only              Keep release as draft (do not publish)
-  --notes <text>            Release notes text (default: Fork release for swe-training)
+  --notes <text>            Release notes text (default: Fork release for rl-training)
   --notes-file <file>       Release notes file (mutually exclusive with --notes)
   -h, --help                Show this help
 
 Examples:
-  ./script/release-fork.sh --version 1.1.63-swe1
-  ./script/release-fork.sh --version v1.1.63-swe1 --repo rasdani/opencode --all-targets --draft-only
+  ./script/release-fork.sh --version 1.1.63-rl1
+  ./script/release-fork.sh --version v1.1.63-rl1 --repo PrimeIntellect-ai/opencode --all-targets --draft-only
 EOF
 }
 
@@ -40,10 +40,10 @@ require_cmd() {
 }
 
 VERSION=""
-REPO="rasdani/opencode"
+REPO="PrimeIntellect-ai/opencode"
 ALL_TARGETS="false"
 DRAFT_ONLY="false"
-NOTES_TEXT="Fork release for swe-training"
+NOTES_TEXT="Fork release for rl-training"
 NOTES_FILE=""
 
 while [[ $# -gt 0 ]]; do
