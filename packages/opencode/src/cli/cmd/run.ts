@@ -506,6 +506,17 @@ export const RunCommand = cmd({
               err = String(props.error.data.message)
             }
             error = error ? error + EOL + err : err
+            // Terminal retry exhaustion is a real failure, not an end-of-run
+            // signal. Flag the process with a non-zero exit code so that
+            // callers (RL rollout harness, CI, humans) can tell the agent
+            // gave up instead of completing normally. The structured stderr
+            // dump was already written by the session processor.
+            if (props.error.name === "TerminalRetryExhaustedError") {
+              process.exitCode = 1
+              process.stderr.write(
+                `[retry-exhaust] session ${sessionID} terminated: ${err}${EOL}`,
+              )
+            }
             if (emit("error", { error: props.error })) continue
             UI.error(err)
           }

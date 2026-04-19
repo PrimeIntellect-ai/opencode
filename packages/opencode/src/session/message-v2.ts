@@ -45,6 +45,28 @@ export namespace MessageV2 {
     "ContextOverflowError",
     z.object({ message: z.string(), responseBody: z.string().optional() }),
   )
+  /**
+   * Thrown when the session-level retry budget is exhausted. This is a
+   * terminal failure - every retry of the underlying LLM call failed - and
+   * should surface as a non-zero process exit at the CLI boundary.
+   *
+   * Wraps the final underlying error (name/message) plus transport-level
+   * details so downstream tooling (verifiers, schedulers) can surface the
+   * real API error chain instead of treating the run as a silent success.
+   */
+  export const TerminalRetryExhaustedError = NamedError.create(
+    "TerminalRetryExhaustedError",
+    z.object({
+      message: z.string(),
+      attempts: z.number(),
+      retryLimit: z.number(),
+      underlyingName: z.string().optional(),
+      statusCode: z.number().optional(),
+      url: z.string().optional(),
+      responseBody: z.string().optional(),
+    }),
+  )
+  export type TerminalRetryExhaustedError = z.infer<typeof TerminalRetryExhaustedError.Schema>
 
   export const OutputFormatText = z
     .object({
@@ -399,6 +421,7 @@ export namespace MessageV2 {
         StructuredOutputError.Schema,
         ContextOverflowError.Schema,
         APIError.Schema,
+        TerminalRetryExhaustedError.Schema,
       ])
       .optional(),
     parentID: z.string(),

@@ -199,3 +199,138 @@ describe("session.message-v2.fromError", () => {
     expect(result.data.isRetryable).toBe(true)
   })
 })
+
+describe("session.retry.redactUrl", () => {
+  test("redacts common secret query parameters", () => {
+    const url = "https://api.example.com/v1/chat?api_key=sk-live-abc123&model=gpt-4"
+    const out = SessionRetry.redactUrl(url)!
+    expect(out).toContain("api_key=%5BREDACTED%5D")
+    expect(out).not.toContain("sk-live-abc123")
+    expect(out).toContain("model=gpt-4")
+  })
+
+  test("redacts authorization, token, bearer, x-api-key, access_token", () => {
+    const url =
+      "https://api.example.com/v1?authorization=xxx&token=yyy&x-api-key=zzz&access_token=aaa&bearer=bbb"
+    const out = SessionRetry.redactUrl(url)!
+    expect(out).not.toContain("xxx")
+    expect(out).not.toContain("yyy")
+    expect(out).not.toContain("zzz")
+    expect(out).not.toContain("aaa")
+    expect(out).not.toContain("bbb")
+  })
+
+  test("redacts userinfo in url", () => {
+    const url = "https://user:pass@api.example.com/v1/chat"
+    const out = SessionRetry.redactUrl(url)!
+    expect(out).not.toContain("pass")
+    expect(out).toContain("%5BREDACTED%5D")
+  })
+
+  test("returns original string when url is unparseable", () => {
+    expect(SessionRetry.redactUrl("not a url")).toBe("not a url")
+  })
+
+  test("passes through undefined", () => {
+    expect(SessionRetry.redactUrl(undefined)).toBeUndefined()
+  })
+})
+
+describe("session.retry.redactBody", () => {
+  test("redacts api_key in JSON-ish bodies", () => {
+    const body = '{"model":"gpt-4","api_key":"sk-live-abc123"}'
+    const out = SessionRetry.redactBody(body)!
+    expect(out).not.toContain("sk-live-abc123")
+    expect(out).toContain("[REDACTED]")
+    expect(out).toContain("gpt-4")
+  })
+
+  test("redacts bearer tokens", () => {
+    const body = "Authorization: Bearer sk-proj-abcdef1234567890"
+    const out = SessionRetry.redactBody(body)!
+    expect(out).not.toContain("sk-proj-abcdef1234567890")
+    expect(out).toContain("Bearer [REDACTED]")
+  })
+
+  test("caps body length", () => {
+    const body = "x".repeat(2000)
+    const out = SessionRetry.redactBody(body)!
+    expect(out.length).toBe(SessionRetry.STDERR_BODY_SNIPPET_MAX)
+  })
+})
+
+describe("session.retry.dumpRetryExhaust", () => {
+  const originalWrite = process.stderr.write.bind(process.stderr)
+
+  function captureStderr(fn: () => void): string {
+    let captured = ""
+    process.stderr.write = ((chunk: any) => {
+      captured += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8")
+      return true
+    }) as typeof process.stderr.write
+    try {
+      fn()
+    } finally {
+      process.stderr.write = originalWrite
+    }
+    return captured
+  }
+
+  test("writes a grep-friendly prefix with retry metadata", () => {
+    const error = new MessageV2.APIError({
+      message: "upstream overloaded",
+      statusCode: 503,
+      isRetryable: true,
+      responseBody: '{"error":"overloaded"}',
+      metadata: { url: "https://api.example.com/v1/chat" },
+    }).toObject() as MessageV2.APIError
+
+    const line = captureStderr(() => {
+      SessionRetry.dumpRetryExhaust({ error, attempt: 2, retryLimit: 2, sessionID: "ses_test" })
+    })
+
+    expect(line.startsWith("[retry-exhaust] ")).toBe(true)
+    expect(line).toContain('"attempt":2')
+    expect(line).toContain('"retryLimit":2')
+    expect(line).toContain('"statusCode":503')
+    expect(line).toContain('"sessionID":"ses_test"')
+    expect(line).toContain('"upstream overloaded"')
+    expect(line).toContain("https://api.example.com/v1/chat")
+  })
+
+  test("redacts secrets from url and body in stderr output", () => {
+    const error = new MessageV2.APIError({
+      message: "boom",
+      statusCode: 500,
+      isRetryable: true,
+      responseBody: '{"api_key":"sk-secret-xyz","note":"hi"}',
+      metadata: { url: "https://api.example.com/v1/chat?api_key=sk-secret-xyz" },
+    }).toObject() as MessageV2.APIError
+
+    const line = captureStderr(() => {
+      SessionRetry.dumpRetryExhaust({ error, attempt: 2, retryLimit: 2 })
+    })
+
+    expect(line).not.toContain("sk-secret-xyz")
+    expect(line).toContain("[REDACTED]")
+  })
+})
+
+describe("session.message-v2.TerminalRetryExhaustedError", () => {
+  test("is tagged with the expected discriminator name", () => {
+    const e = new MessageV2.TerminalRetryExhaustedError({
+      message: "gave up",
+      attempts: 2,
+      retryLimit: 2,
+      underlyingName: "APIError",
+      statusCode: 503,
+    })
+    const obj = e.toObject()
+    expect(obj.name).toBe("TerminalRetryExhaustedError")
+    expect(MessageV2.TerminalRetryExhaustedError.isInstance(obj)).toBe(true)
+    expect(obj.data.attempts).toBe(2)
+    expect(obj.data.retryLimit).toBe(2)
+    expect(obj.data.underlyingName).toBe("APIError")
+    expect(obj.data.statusCode).toBe(503)
+  })
+})
