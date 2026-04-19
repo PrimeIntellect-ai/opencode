@@ -264,11 +264,10 @@ describe("session.retry.dumpRetryExhaust", () => {
 
   function captureStderr(fn: () => void): string {
     let captured = ""
-    // @ts-expect-error override write for test
-    process.stderr.write = (chunk: string | Uint8Array) => {
+    process.stderr.write = ((chunk: any) => {
       captured += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8")
       return true
-    }
+    }) as typeof process.stderr.write
     try {
       fn()
     } finally {
