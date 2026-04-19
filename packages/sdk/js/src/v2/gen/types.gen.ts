@@ -201,6 +201,19 @@ export type ApiError = {
   }
 }
 
+export type TerminalRetryExhaustedError = {
+  name: "TerminalRetryExhaustedError"
+  data: {
+    message: string
+    attempts: number
+    retryLimit: number
+    underlyingName?: string
+    statusCode?: number
+    url?: string
+    responseBody?: string
+  }
+}
+
 export type AssistantMessage = {
   id: string
   sessionID: string
@@ -217,6 +230,7 @@ export type AssistantMessage = {
     | StructuredOutputError
     | ContextOverflowError
     | ApiError
+    | TerminalRetryExhaustedError
   parentID: string
   modelID: string
   providerID: string
@@ -871,6 +885,7 @@ export type EventSessionError = {
       | StructuredOutputError
       | ContextOverflowError
       | ApiError
+      | TerminalRetryExhaustedError
   }
 }
 

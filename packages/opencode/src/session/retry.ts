@@ -8,8 +8,111 @@ export namespace SessionRetry {
   export const RETRY_MAX_DELAY_NO_HEADERS = 30_000 // 30 seconds
   export const RETRY_MAX_DELAY = 2_147_483_647 // max 32-bit signed integer for setTimeout
 
+  /**
+   * Cap on the size of response-body snippets emitted to stderr when retry
+   * budget is exhausted. Keeps the dump short enough for grep-friendly logs
+   * while still preserving enough context to diagnose provider errors.
+   */
+  export const STDERR_BODY_SNIPPET_MAX = 500
+
+  const SECRET_QUERY_KEYS = [
+    "api_key",
+    "apikey",
+    "api-key",
+    "x-api-key",
+    "authorization",
+    "auth",
+    "token",
+    "access_token",
+    "accesstoken",
+    "bearer",
+    "key",
+    "secret",
+  ]
+
   function isTerminalRolloutConflict(error: MessageV2.APIError) {
     return error.data.statusCode === 409 && error.data.metadata?.url?.includes("/v1/rollouts/")
+  }
+
+  /**
+   * Redact secret-looking values from a URL's query string and userinfo.
+   * Returns the original string (unchanged) if the URL cannot be parsed -
+   * this is a stderr logging helper, not a validator.
+   */
+  export function redactUrl(url: string | undefined): string | undefined {
+    if (!url) return url
+    try {
+      const parsed = new URL(url)
+      if (parsed.username || parsed.password) {
+        parsed.username = "[REDACTED]"
+        parsed.password = ""
+      }
+      for (const key of Array.from(parsed.searchParams.keys())) {
+        if (SECRET_QUERY_KEYS.some((s) => key.toLowerCase() === s)) {
+          parsed.searchParams.set(key, "[REDACTED]")
+        }
+      }
+      return parsed.toString()
+    } catch {
+      return url
+    }
+  }
+
+  /**
+   * Scrub secret-looking values from a body snippet. Best-effort: handles
+   * common JSON-ish and key=value patterns without assuming structured input.
+   */
+  export function redactBody(body: string | undefined): string | undefined {
+    if (!body) return body
+    let out = body
+    for (const key of SECRET_QUERY_KEYS) {
+      // "key": "value" or 'key': 'value'
+      const jsonRe = new RegExp(`(["']${key}["']\\s*:\\s*)(["'])([^"']*?)\\2`, "gi")
+      out = out.replace(jsonRe, (_m, p1, q) => `${p1}${q}[REDACTED]${q}`)
+      // key=value in query-style or headers
+      const kvRe = new RegExp(`(${key}=)([^&\\s"']+)`, "gi")
+      out = out.replace(kvRe, (_m, p1) => `${p1}[REDACTED]`)
+    }
+    // Bearer <token>
+    out = out.replace(/(bearer\s+)([A-Za-z0-9._~+/=-]+)/gi, (_m, p1) => `${p1}[REDACTED]`)
+    return out.slice(0, STDERR_BODY_SNIPPET_MAX)
+  }
+
+  /**
+   * Build and write the structured retry-exhaustion dump to process stderr.
+   *
+   * This must hit **process stderr** directly (not the opencode log file) so
+   * that host sandboxes - notably the PrimeIntellect RL rollout harness -
+   * capture the real underlying error via their `agent_stderr` channel.
+   * Prefix is grep-friendly on purpose.
+   */
+  export function dumpRetryExhaust(input: {
+    error: ReturnType<NamedError["toObject"]>
+    attempt: number
+    retryLimit: number
+    sessionID?: string
+  }): string {
+    const { error, attempt, retryLimit } = input
+    const data: any = error.data ?? {}
+    const isAPI = MessageV2.APIError.isInstance(error)
+    const url = isAPI ? redactUrl(data.metadata?.url) : undefined
+    const statusCode = isAPI ? data.statusCode : undefined
+    const body = isAPI ? redactBody(data.responseBody) : undefined
+    const msg = typeof data.message === "string" ? data.message : undefined
+
+    const payload: Record<string, unknown> = {
+      name: error.name,
+      attempt,
+      retryLimit,
+      ...(input.sessionID ? { sessionID: input.sessionID } : {}),
+      ...(statusCode !== undefined ? { statusCode } : {}),
+      ...(url ? { url } : {}),
+      ...(msg ? { message: msg } : {}),
+      ...(body ? { body } : {}),
+    }
+    const line = `[retry-exhaust] ${JSON.stringify(payload)}\n`
+    process.stderr.write(line)
+    return line
   }
 
   export async function sleep(ms: number, signal: AbortSignal): Promise<void> {

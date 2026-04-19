@@ -356,12 +356,51 @@ export namespace SessionProcessor {
               await SessionRetry.sleep(delay, input.abort).catch(() => {})
               continue
             }
-            input.assistantMessage.error = error
-            Bus.publish(Session.Event.Error, {
-              sessionID: input.assistantMessage.sessionID,
-              error: input.assistantMessage.error,
-            })
-            SessionStatus.set(input.sessionID, { type: "idle" })
+            // Retry budget exhausted (retries were available but we've used
+            // them all): dump the underlying error to stderr and tag the
+            // error so the CLI entry can exit non-zero. Previously this path
+            // silently returned exit code 0, which made ~60% of failed RL
+            // rollouts indistinguishable from empty-but-successful runs.
+            if (retry !== undefined && attempt >= retryLimit) {
+              SessionRetry.dumpRetryExhaust({
+                error,
+                attempt,
+                retryLimit,
+                sessionID: input.sessionID,
+              })
+              const apiData = MessageV2.APIError.isInstance(error) ? error.data : undefined
+              const wrapped = new MessageV2.TerminalRetryExhaustedError({
+                message:
+                  typeof apiData?.message === "string"
+                    ? apiData.message
+                    : typeof (error.data as any)?.message === "string"
+                      ? ((error.data as any).message as string)
+                      : "Retry budget exhausted",
+                attempts: attempt,
+                retryLimit,
+                underlyingName: error.name,
+                ...(apiData?.statusCode !== undefined ? { statusCode: apiData.statusCode } : {}),
+                ...(apiData?.metadata?.url
+                  ? { url: SessionRetry.redactUrl(apiData.metadata.url) ?? apiData.metadata.url }
+                  : {}),
+                ...(apiData?.responseBody
+                  ? { responseBody: SessionRetry.redactBody(apiData.responseBody) ?? apiData.responseBody }
+                  : {}),
+              }).toObject()
+              input.assistantMessage.error = wrapped
+              Bus.publish(Session.Event.Error, {
+                sessionID: input.assistantMessage.sessionID,
+                error: input.assistantMessage.error,
+              })
+              SessionStatus.set(input.sessionID, { type: "idle" })
+            } else {
+              input.assistantMessage.error = error
+              Bus.publish(Session.Event.Error, {
+                sessionID: input.assistantMessage.sessionID,
+                error: input.assistantMessage.error,
+              })
+              SessionStatus.set(input.sessionID, { type: "idle" })
+            }
           }
           if (snapshot) {
             const patch = await Snapshot.patch(snapshot)
